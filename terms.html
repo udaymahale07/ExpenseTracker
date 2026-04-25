@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service — Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="theme.js"></script>
+    <style>
+        @keyframes etFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .page-wrapper, .main-content, .content-wrapper { animation: etFadeIn 0.22s ease both; }
+
+        :root {
+            --primary: #2b6777;
+            --primary-light: #52ab98;
+            --bg: #f2f5f7;
+            --card-bg: #ffffff;
+            --text: #2d3742;
+            --text-light: #6b7a8d;
+            --border: #e8ecf0;
+            --accent-bg: #edf7f4;
+        }
+        [data-theme="dark"] {
+            --bg: #0f1923;
+            --card-bg: #19263a;
+            --text: #dce8f0;
+            --text-light: #7a93a8;
+            --border: #243447;
+            --accent-bg: rgba(82,171,152,0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .top-bar {
+            background: linear-gradient(135deg, #1b3e48, #2b6777);
+            padding: 18px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .top-bar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        .top-bar-brand img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; }
+        .top-bar-brand span { color: white; font-size: 1.1rem; font-weight: 600; }
+        .back-home {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s;
+        }
+        .back-home:hover { color: #fff; }
+
+        .hero {
+            background: linear-gradient(160deg, #1b3e48 0%, #2b6777 60%, #3a8a7a 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        .hero h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 10px; }
+        .hero p { opacity: 0.8; font-size: 1rem; }
+        .hero .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 20px;
+            padding: 5px 16px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .content-wrapper { max-width: 820px; margin: 0 auto; padding: 50px 24px 80px; }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 32px 36px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--accent-bg);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-light);
+            flex-shrink: 0;
+        }
+        .section-icon svg { width: 22px; height: 22px; }
+        .section h2 { font-size: 1.15rem; font-weight: 600; color: var(--primary); }
+        .section p { color: var(--text-light); margin-bottom: 12px; font-size: 0.95rem; }
+        .section p:last-child { margin-bottom: 0; }
+        .section ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+        .section ul li {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .section ul li::before { content: "→"; color: var(--primary-light); font-weight: 700; flex-shrink: 0; }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-top: 14px;
+            font-size: 0.9rem;
+            color: #78350f;
+        }
+        [data-theme="dark"] .warning-box { background: rgba(245,158,11,0.1); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
+
+        .page-footer {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        .page-footer a { color: var(--primary-light); text-decoration: none; }
+        .page-footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            .top-bar { padding: 14px 20px; }
+            .hero { padding: 40px 20px; }
+            .hero h1 { font-size: 1.7rem; }
+            .section { padding: 22px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <a href="login.html" class="top-bar-brand">
+            <img src="logo.png" alt="Expense Tracker Logo">
+            <span>Expense Tracker</span>
+        </a>
+        <a href="registrationform.html" class="back-home">← Back to Registration</a>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Effective: April 2026</div>
+        <h1>Terms of Service</h1>
+        <p>Please read these terms carefully before using Expense Tracker</p>
+    </div>
+
+    <div class="content-wrapper">
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <h2>1. Acceptance of Terms</h2>
+            </div>
+            <p>By creating an account and accessing Expense Tracker, you confirm that you have read, understood, and agree to be bound by these Terms of Service and our <a href="privacy_policy.html" style="color: var(--primary-light)">Privacy Policy</a>.</p>
+            <p>If you do not agree to these terms, please do not create an account or use the application.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <h2>2. Use of the Service</h2>
+            </div>
+            <p>Expense Tracker is a personal finance tracking tool. By using the service, you agree to:</p>
+            <ul>
+                <li>Use the application only for lawful, personal finance tracking purposes.</li>
+                <li>Provide accurate information when creating your account.</li>
+                <li>Keep your login credentials secure and not share your account with others.</li>
+                <li>Not attempt to reverse-engineer, hack, or disrupt the application or its servers.</li>
+                <li>Not input false, misleading, or harmful data into the system.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <h2>3. Account Responsibility</h2>
+            </div>
+            <p>You are solely responsible for all activity that occurs under your account. This includes:</p>
+            <ul>
+                <li>Maintaining the confidentiality of your email and password.</li>
+                <li>All expense entries and data you add, edit, or delete.</li>
+                <li>Notifying us immediately if you suspect any unauthorised access to your account.</li>
+            </ul>
+            <p>We are not liable for any losses resulting from unauthorised use of your account due to your failure to keep credentials secure.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                </div>
+                <h2>4. Data & Content</h2>
+            </div>
+            <p>You retain full ownership of all expense data you enter into the application. You can export or delete your data at any time through the application's features.</p>
+            <p>We do not claim any rights over your personal financial data. We only process it to deliver the service described in our Privacy Policy.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <h2>5. Limitation of Liability</h2>
+            </div>
+            <p>Expense Tracker is provided "as is" for personal tracking purposes. We are not a certified financial advisor or service and we expressly disclaim all financial advice liability.</p>
+            <div class="warning-box">
+                ⚠️ The data and analytics shown in Expense Tracker are for personal reference only and should not be used as the sole basis for any financial decisions.
+            </div>
+            <p style="margin-top:14px">We are not liable for data loss due to browser clearing, server issues, or account deletion.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <h2>6. Governing Law</h2>
+            </div>
+            <p>These Terms of Service shall be governed by and construed in accordance with the laws of India. Any disputes arising from these terms shall be subject to the jurisdiction of the courts in India.</p>
+            <p>We reserve the right to update these Terms at any time. Continued use of the application after changes constitutes acceptance of the updated terms.</p>
+        </div>
+
+    </div>
+
+    <footer class="page-footer">
+        <p>&copy; 2026 Expense Tracker. All rights reserved. &nbsp;|&nbsp;
+            <a href="privacy_policy.html">Privacy Policy</a> &nbsp;|&nbsp;
+            <a href="terms.html">Terms of Service</a>
+        </p>
+    </footer>
+
+</body>
+</html>

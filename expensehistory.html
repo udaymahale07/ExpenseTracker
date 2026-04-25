@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense History — Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="theme.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        @keyframes etFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .page-wrapper, .main-content, .content-wrapper { animation: etFadeIn 0.22s ease both; }
+
+        :root {
+            --primary: #2b6777;
+            --primary-light: #52ab98;
+            --bg: #f0f4f8;
+            --card-bg: #ffffff;
+            --text: #2d3742;
+            --text-light: #6b7a8d;
+            --border: #e4eaf0;
+        }
+        [data-theme="dark"] {
+            --bg: #0d1520;
+            --card-bg: #19263a;
+            --text: #dce8f0;
+            --text-light: #7a93a8;
+            --border: #243447;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* ── Dark Sidebar ── */
+        .sidebar { width:256px; background:linear-gradient(180deg,#1b3e48 0%,#132e36 100%); box-shadow:2px 0 20px rgba(0,0,0,0.25); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:150; transition:transform 0.3s ease; }
+        .sidebar-header { padding:22px 18px; border-bottom:1px solid rgba(255,255,255,0.07); }
+        .sidebar-header h1 { color:#fff; margin:0; font-size:1rem; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; }
+        .sidebar-logo { width:32px; height:32px; object-fit:contain; border-radius:6px; }
+        .nav-links { padding:10px 0; display:flex; flex-direction:column; flex:1; overflow-y:auto; }
+        .nav-link { padding:13px 22px; display:flex; align-items:center; gap:12px; color:rgba(255,255,255,0.62); text-decoration:none; font-weight:500; font-size:0.9rem; transition:all 0.2s; position:relative; }
+        .nav-link:hover { background:rgba(82,171,152,0.14); color:rgba(255,255,255,0.92); }
+        .nav-link.active { background:rgba(82,171,152,0.22); color:#fff; font-weight:600; }
+        .nav-link.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#52ab98; border-radius:0 2px 2px 0; }
+        .logout-link { margin-top:auto; border-top:1px solid rgba(255,255,255,0.07); color:rgba(255,130,120,0.8) !important; }
+        .logout-link:hover { background:rgba(229,57,53,0.14) !important; color:#ff8a80 !important; }
+
+        .mobile-topbar { display:none; position:fixed; top:0; left:0; right:0; height:58px; background:linear-gradient(90deg,#1b3e48,#2b6777); z-index:200; align-items:center; padding:0 18px; gap:12px; box-shadow:0 2px 10px rgba(0,0,0,0.25); }
+        .hamburger-btn { background:none; border:none; color:white; cursor:pointer; padding:6px; display:flex; align-items:center; border-radius:6px; transition:background 0.2s; }
+        .hamburger-btn:hover { background:rgba(255,255,255,0.12); }
+        .mobile-logo { width:28px; height:28px; object-fit:contain; border-radius:5px; }
+        .mobile-app-title { color:white; font-weight:600; font-size:0.95rem; }
+        .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.52); z-index:140; backdrop-filter:blur(2px); }
+        @media (max-width:768px) {
+            .mobile-topbar { display:flex; }
+            .sidebar { transform:translateX(-100%); }
+            .main-content { margin-left:0 !important; padding:75px 14px 30px !important; }
+            body.sidebar-open .sidebar { transform:translateX(0); }
+            body.sidebar-open .sidebar-overlay { display:block; }
+        }
+
+        /* ── Main Content ── */
+        .main-content {
+            flex: 1;
+            margin-left: 256px;
+            padding: 36px 40px;
+            min-width: 0;
+        }
+
+        /* ── Page Header ── */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 26px;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .page-title h2 { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .page-title p { font-size: 0.85rem; color: var(--text-light); margin-top: 3px; }
+
+        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 9px;
+            background: var(--card-bg);
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        .export-btn:hover { background: var(--bg); transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
+        .export-btn.csv i, .export-btn.csv svg { color: #107c41; }
+        .export-btn.pdf i, .export-btn.pdf svg { color: #e53935; }
+        [data-theme="dark"] .export-btn { background: var(--card-bg); }
+
+        /* ── Filters ── */
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+        }
+        .search-box { flex: 1; min-width: 220px; position: relative; }
+        .search-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-light); pointer-events: none; }
+        .search-box input {
+            width: 100%;
+            padding: 11px 14px 11px 42px;
+            border: 1.5px solid var(--border);
+            border-radius: 9px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9rem;
+            background: var(--card-bg);
+            color: var(--text);
+            outline: none;
+            transition: all 0.25s;
+        }
+        .search-box input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(82,171,152,0.15); }
+
+        .filter-box { position: relative; min-width: 180px; }
+        .filter-box select {
+            width: 100%;
+            padding: 11px 38px 11px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 9px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9rem;
+            background: var(--card-bg);
+            color: var(--text);
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.25s;
+        }
+        .filter-box select:focus { border-color: var(--primary-light); }
+        .filter-box i { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-light); }
+
+        /* ── Charts ── */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+        @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            transition: background 0.3s;
+        }
+        [data-theme="dark"] .chart-card { box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .chart-card h3 { font-size: 0.95rem; font-weight: 600; color: var(--primary); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+        .canvas-wrap { position: relative; width: 100%; height: 260px; }
+
+        /* Custom doughnut legend */
+        .doughnut-inner { display: flex; align-items: center; gap: 18px; }
+        .doughnut-canvas-wrap { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
+        @media (max-width: 500px) { .doughnut-inner { flex-direction: column; } .doughnut-canvas-wrap { width: 150px; height: 150px; } }
+        .custom-legend { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .legend-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        .legend-left { display: flex; align-items: center; gap: 9px; color: var(--text); }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .legend-val { font-weight: 700; color: var(--primary); }
+        [data-theme="dark"] .legend-val { color: var(--primary-light); }
+
+        /* ── Table ── */
+        .table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            margin-bottom: 30px;
+            transition: background 0.3s;
+        }
+        [data-theme="dark"] .table-card { box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 18px; text-align: left; }
+        th { background: linear-gradient(135deg,#2b6777,#3a8a7a); color: white; font-weight: 500; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.6px; }
+        td { border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(82,171,152,0.04); }
+        .category-cell { display: flex; align-items: center; gap: 9px; font-weight: 500; }
+        .amount { font-weight: 700; color: var(--primary); }
+        [data-theme="dark"] .amount { color: var(--primary-light); }
+        .empty-state { text-align: center; padding: 50px; color: var(--text-light); }
+        .loading-state { text-align: center; padding: 50px; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Topbar -->
+    <div class="mobile-topbar">
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu"><i data-lucide="menu" width="24" height="24"></i></button>
+        <img src="logo.png" alt="Logo" class="mobile-logo">
+        <span class="mobile-app-title">Expense History</span>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1><img src="logo.png" alt="Logo" class="sidebar-logo"><span>Expense Tracker</span></h1>
+        </div>
+        <nav class="nav-links">
+            <a href="dailyexpense.php"    class="nav-link"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></a>
+            <a href="profile.php"         class="nav-link"><i data-lucide="user"></i>             <span>My Profile</span></a>
+            <a href="profile_update.php"  class="nav-link"><i data-lucide="edit"></i>             <span>Update Profile</span></a>
+            <a href="expensehistory.html" class="nav-link active"><i data-lucide="history"></i>   <span>Expense History</span></a>
+            <a href="settings.php"        class="nav-link"><i data-lucide="settings"></i>         <span>Settings</span></a>
+            <a href="logout.php"          class="nav-link logout-link"><i data-lucide="log-out"></i> <span>Logout</span></a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-title">
+                <h2><i data-lucide="history" width="26" height="26"></i> Expense History</h2>
+                <p>Analytics, trends, and full spending history</p>
+            </div>
+            <div class="header-actions">
+                <button class="export-btn csv" onclick="generateCSV()">
+                    <i data-lucide="file-spreadsheet" width="16" height="16"></i> Export CSV
+                </button>
+                <button class="export-btn pdf" onclick="generatePDF()">
+                    <i data-lucide="file-text" width="16" height="16"></i> Export PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="search-box">
+                <i data-lucide="search" width="18" height="18"></i>
+                <input type="text" id="searchInput" placeholder="Search by date, category, or amount...">
+            </div>
+            <div class="filter-box">
+                <select id="categoryFilter">
+                    <option value="All">All Categories</option>
+                    <option value="Food">🍽️ Food</option>
+                    <option value="Beverages">☕ Beverages</option>
+                    <option value="Transport">🚗 Transport</option>
+                    <option value="Education">📚 Education</option>
+                    <option value="Utilities">⚡ Utilities</option>
+                    <option value="Other">🏷️ Other</option>
+                </select>
+                <i data-lucide="chevron-down" width="16" height="16"></i>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid" id="chartsSection" style="display:none;">
+            <div class="chart-card">
+                <h3><i data-lucide="bar-chart-2" width="18" height="18"></i> Spending Over Time</h3>
+                <div class="canvas-wrap">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3 id="doughnutTitle"><i data-lucide="pie-chart" width="18" height="18"></i> Category Breakdown</h3>
+                <div class="doughnut-inner">
+                    <div class="doughnut-canvas-wrap">
+                        <canvas id="doughnutChart"></canvas>
+                    </div>
+                    <div id="customLegend" class="custom-legend"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="3" class="loading-state">Loading expenses...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script src="toast.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Hamburger
+        document.getElementById('hamburgerBtn')?.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
+        document.getElementById('sidebarOverlay')?.addEventListener('click', () => document.body.classList.remove('sidebar-open'));
+
+        // ── Data & State ──
+        let allExpenses = [];
+        let currentExportData = [];
+        let barChartInstance = null;
+        let doughnutChartInstance = null;
+
+        const categoryColors = {
+            'Food': '#ff6384', 'Beverages': '#ff9f40', 'Transport': '#36a2eb',
+            'Education': '#9966ff', 'Utilities': '#ffcd56', 'Other': '#c9cbcf',
+            'fallback': '#4bc0c0'
+        };
+
+        // ── Fetch ──
+        async function fetchHistory() {
+            try {
+                const res = await fetch('get_expenses.php');
+                const result = await res.json();
+                if (result.status === 'success') {
+                    allExpenses = result.data;
+                    currentExportData = result.data;
+                    document.getElementById('chartsSection').style.display = 'grid';
+                    processAndRender(allExpenses);
+                } else {
+                    showError(result.message || 'Error fetching data.');
+                }
+            } catch (err) {
+                showError('Network error while fetching history.');
+            }
+        }
+
+        function processAndRender(data) {
+            renderTable(data);
+            updateCharts(data);
+        }
+
+        // ── Table ──
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="3" class="empty-state"><i data-lucide="inbox" width="36" height="36" style="opacity:0.35;display:block;margin:0 auto 10px"></i>No expenses found matching your criteria.</td></tr>`;
+                lucide.createIcons();
+                return;
+            }
+            data.forEach(expense => {
+                let icon = 'tag';
+                const cat = expense.category.toLowerCase();
+                if (cat.includes('food'))  icon = 'utensils';
+                else if (cat.includes('bev')) icon = 'coffee';
+                else if (cat.includes('tra')) icon = 'car';
+                else if (cat.includes('edu')) icon = 'book-open';
+                else if (cat.includes('uti')) icon = 'zap';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${expense.expense_date}</td>
+                    <td><div class="category-cell"><i data-lucide="${icon}" width="16" height="16" style="color:var(--primary-light)"></i> ${expense.category}</div></td>
+                    <td class="amount">₹${parseFloat(expense.amount).toFixed(2)}</td>`;
+                tbody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function showError(msg) {
+            document.getElementById('tableBody').innerHTML = `<tr><td colspan="3" style="color:#e53935;text-align:center;padding:30px">${msg}</td></tr>`;
+            document.getElementById('chartsSection').style.display = 'none';
+        }
+
+        // ── Charts ──
+        function updateCharts(data) {
+            const dailyTotals = {}, catTotals = {};
+            data.forEach(ex => {
+                const amt = parseFloat(ex.amount);
+                dailyTotals[ex.expense_date] = (dailyTotals[ex.expense_date] || 0) + amt;
+                catTotals[ex.category] = (catTotals[ex.category] || 0) + amt;
+            });
+
+            const sortedDates = Object.keys(dailyTotals).sort();
+            const fmtDates = sortedDates.map(d => { const dt = new Date(d); return dt.toLocaleDateString('en-IN', {month:'short',day:'numeric'}); });
+            const barData = sortedDates.map(d => dailyTotals[d]);
+
+            const catLabels = Object.keys(catTotals);
+            const pieData = catLabels.map(c => catTotals[c]);
+            const pieColors = catLabels.map(c => categoryColors[c] || categoryColors.fallback);
+            const total = pieData.reduce((s, v) => s + v, 0);
+
+            document.getElementById('doughnutTitle').innerHTML = `<i data-lucide="pie-chart" width="18" height="18"></i> Breakdown (₹${total.toLocaleString('en-IN',{minimumFractionDigits:2})})`;
+            lucide.createIcons();
+
+            // Bar Chart
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: fmtDates,
+                    datasets: [{ label:'Daily Spending (₹)', data: barData, backgroundColor:'#52ab98', borderRadius:6 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero:true, grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ callback: v => v>=1000 ? v/1000+'k' : v } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => '₹' + ctx.raw.toLocaleString('en-IN') } }
+                    }
+                }
+            });
+
+            // Doughnut Chart
+            const pieCtx = document.getElementById('doughnutChart').getContext('2d');
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+            doughnutChartInstance = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: { labels: catLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2 }] },
+                options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { display:false } } }
+            });
+
+            // Custom Legend
+            const leg = document.getElementById('customLegend');
+            leg.innerHTML = '';
+            catLabels.forEach((cat, i) => {
+                const div = document.createElement('div');
+                div.className = 'legend-item';
+                div.innerHTML = `
+                    <div class="legend-left">
+                        <span class="legend-dot" style="background:${pieColors[i]}"></span>
+                        <span>${cat}</span>
+                    </div>
+                    <span class="legend-val">₹${pieData[i].toLocaleString('en-IN',{minimumFractionDigits:2})}</span>`;
+                leg.appendChild(div);
+            });
+        }
+
+        // ── Filters ──
+        function applyFilters() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const cat = document.getElementById('categoryFilter').value;
+            const filtered = allExpenses.filter(ex =>
+                (cat === 'All' || ex.category === cat) &&
+                (ex.expense_date.toLowerCase().includes(q) || ex.category.toLowerCase().includes(q) || String(ex.amount).includes(q))
+            );
+            currentExportData = filtered;
+            processAndRender(filtered);
+        }
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+
+        // ── CSV Export ──
+        function generateCSV() {
+            if (!currentExportData.length) { Toast.warning('No data to export.'); return; }
+            let csv = 'Date,Category,Amount\n';
+            currentExportData.forEach(r => { csv += `"${r.expense_date}","${r.category}","${r.amount}"\n`; });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = 'Expense_Report.csv';
+            a.click();
+            Toast.success('CSV downloaded!');
+        }
+
+        // ── PDF Export ──
+        function generatePDF() {
+            if (!currentExportData.length) { Toast.warning('No data to export.'); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(20); doc.setTextColor(43,103,119);
+            doc.text('Personal Expense Report', 14, 22);
+            doc.setFontSize(10); doc.setTextColor(120);
+            doc.text('Generated on: ' + new Date().toLocaleDateString(), 14, 30);
+            let total = 0;
+            const rows = currentExportData.map(ex => {
+                total += parseFloat(ex.amount);
+                return [ex.expense_date, ex.category, '₹' + parseFloat(ex.amount).toFixed(2)];
+            });
+            rows.push(['', 'TOTAL', '₹' + total.toFixed(2)]);
+            doc.autoTable({
+                startY: 38,
+                head: [['Date','Category','Amount']],
+                body: rows,
+                theme: 'striped',
+                headStyles: { fillColor: [43,103,119] },
+                didParseCell: d => { if (d.row.index === rows.length - 1) { d.cell.styles.fontStyle = 'bold'; } }
+            });
+            doc.save('Expense_Report.pdf');
+            Toast.success('PDF downloaded!');
+        }
+
+        // ── Init ──
+        document.addEventListener('DOMContentLoaded', fetchHistory);
+    </script>
+</body>
+</html>
