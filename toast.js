@@ -79,9 +79,9 @@
     }
 
     window.Toast = {
-        success: function (msg, dur) { show(msg, 'success', dur); },
+        success: function (msg, dur) { /* Disabled per user request */ },
         error:   function (msg, dur) { show(msg, 'error',   dur); },
-        info:    function (msg, dur) { show(msg, 'info',    dur); },
+        info:    function (msg, dur) { /* Disabled per user request */ },
         warning: function (msg, dur) { show(msg, 'warning', dur); }
     };
 }());

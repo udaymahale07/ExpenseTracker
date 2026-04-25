@@ -32,6 +32,10 @@ try {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM expenses WHERE user_id=:u");
     $stmt->execute(['u' => $user_id]);
     $totalEntries = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("SELECT monthly_budget FROM users WHERE id=:u");
+    $stmt->execute(['u' => $user_id]);
+    $budgetLimit = $stmt->fetchColumn();
 } catch (PDOException $e) {
     error_log("KPI error: " . $e->getMessage());
 }
@@ -39,7 +43,7 @@ try {
 // ── Fetch recent expenses ─────────────────────────────────────────────────────
 $expenses = [];
 try {
-    $stmt = $pdo->prepare("SELECT expense_date, category, amount FROM expenses WHERE user_id=:u ORDER BY expense_date DESC, id DESC LIMIT 50");
+    $stmt = $pdo->prepare("SELECT id, expense_date, category, amount, notes FROM expenses WHERE user_id=:u ORDER BY expense_date DESC, id DESC LIMIT 50");
     $stmt->execute(['u' => $user_id]);
     $expenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -261,8 +265,8 @@ try {
         [data-theme="dark"] .kpi-icon.category { background: rgba(217,119,6,0.15);  color: #fbbf24; }
 
         .kpi-info { min-width: 0; }
-        .kpi-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
-        .kpi-value { font-size: 1.35rem; font-weight: 700; color: var(--text); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .kpi-label { display: block; font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
+        .kpi-value { display: block; font-size: 1.35rem; font-weight: 700; color: var(--text); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* Cards */
         .card {
@@ -400,6 +404,35 @@ try {
         </div>
     </div>
 
+    <!-- Edit Modal -->
+    <div class="success-popup-overlay" id="editModalOverlay">
+        <div class="success-popup" style="width:90%; max-width:400px; padding:24px;">
+            <h3 style="margin-bottom:15px; width:100%; text-align:left;">Edit Expense</h3>
+            <form id="edit-form" style="width:100%; text-align:left;">
+                <input type="hidden" id="edit_id" name="id">
+                <label>Date</label>
+                <input type="date" id="edit_date" name="date" required style="margin-bottom:10px;">
+                <label>Category</label>
+                <select id="edit_category" name="category" required style="margin-bottom:10px;">
+                    <option value="Food">🍽️ Food</option>
+                    <option value="Beverages">☕ Beverages</option>
+                    <option value="Transport">🚗 Transport</option>
+                    <option value="Education">📚 Education</option>
+                    <option value="Utilities">⚡ Utilities</option>
+                    <option value="Other">🏷️ Others</option>
+                </select>
+                <label>Amount</label>
+                <input type="number" id="edit_amount" name="amount" required min="0.01" step="0.01" style="margin-bottom:10px;">
+                <label>Notes</label>
+                <input type="text" id="edit_notes" name="notes" style="margin-bottom:15px;" placeholder="Optional details">
+                <div style="display:flex; gap:10px;">
+                    <button type="submit" style="flex:1;"><i data-lucide="check" width="16" height="16"></i> Save</button>
+                    <button type="button" onclick="closeEditModal()" style="flex:1; background:var(--border); color:var(--text);"><i data-lucide="x" width="16" height="16"></i> Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Mobile Topbar -->
     <div class="mobile-topbar">
         <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle menu">
@@ -468,18 +501,43 @@ try {
         </div>
 
         <!-- Content Grid -->
+        <?php if ($budgetLimit > 0): 
+            $pct = min(100, ($monthTotal / $budgetLimit) * 100);
+            $barColor = $pct >= 90 ? '#e53935' : ($pct >= 75 ? '#fbbf24' : '#52ab98');
+        ?>
+        <div class="card" style="padding:18px 28px; margin-bottom:24px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.85rem; font-weight:500;">
+                <span style="color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">Monthly Budget Progress</span>
+                <span style="color:var(--text); font-weight:600;">₹<?php echo number_format($monthTotal, 2); ?> / ₹<?php echo number_format($budgetLimit, 2); ?> (<?php echo round($pct); ?>%)</span>
+            </div>
+            <div style="height:8px; background:var(--border); border-radius:4px; overflow:hidden;">
+                <div style="height:100%; width:<?php echo $pct; ?>%; background:<?php echo $barColor; ?>; transition:width 0.5s ease;"></div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="content-grid">
 
             <!-- ADD EXPENSE FORM -->
+                        <!-- ADD EXPENSE FORM -->
             <form id="expense-form" class="card form-card">
-                <div class="card-title"><i data-lucide="plus-circle" width="20" height="20"></i> Add Expense</div>
+                <h2 class="card-title"><i data-lucide="plus-circle" width="20" height="20"></i> Add Expense</h2>
 
-                <label for="date">Date</label>
-                <input type="date" id="date" name="date" required value="<?php echo date('Y-m-d'); ?>">
+                <!-- Side-by-side Date and Amount -->
+                <div style="display:flex; gap:16px;">
+                    <div style="flex:1;">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" name="date" required value="<?php echo date('Y-m-d'); ?>" style="width:100%;">
+                    </div>
+                    <div style="flex:1;">
+                        <label for="amount">Amount (₹)</label>
+                        <input type="number" id="amount" name="amount" required min="0.01" step="0.01" placeholder="0.00" style="width:100%;">
+                    </div>
+                </div>
 
                 <label for="category">Category</label>
                 <select id="category" name="category" required>
-                    <option value="">— Select Category —</option>
+                    <option value="" disabled selected>-- Select Category --</option>
                     <option value="Food">🍽️ Food</option>
                     <option value="Beverages">☕ Beverages</option>
                     <option value="Transport">🚗 Transport</option>
@@ -488,8 +546,8 @@ try {
                     <option value="Other">🏷️ Others</option>
                 </select>
 
-                <label for="amount">Amount (₹)</label>
-                <input type="number" id="amount" name="amount" required min="0.01" step="0.01" placeholder="0.00">
+                <label for="notes">Notes (Optional)</label>
+                <input type="text" id="notes" name="notes" placeholder="What was this for?">
 
                 <button type="submit"><i data-lucide="check" width="18" height="18"></i> Save Expense</button>
             </form>
@@ -503,6 +561,8 @@ try {
                             <th>Date</th>
                             <th>Category</th>
                             <th>Amount</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -515,8 +575,8 @@ try {
                         elseif (strpos($cat,'edu')   !== false) $icon = 'book-open';
                         elseif (strpos($cat,'util')  !== false) $icon = 'zap';
                     ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($expense['expense_date']); ?></td>
+                        <tr data-id="<?php echo $expense['id']; ?>">
+                            <td class="date-cell" data-date="<?php echo htmlspecialchars($expense['expense_date']); ?>"><?php echo htmlspecialchars($expense['expense_date']); ?></td>
                             <td>
                                 <div class="category-cell">
                                     <i data-lucide="<?php echo $icon; ?>" width="16" height="16" style="color:var(--primary-light)"></i>
@@ -524,12 +584,19 @@ try {
                                 </div>
                             </td>
                             <td class="amount">₹<?php echo number_format($expense['amount'],2); ?></td>
+                            <td style="font-size:0.85rem; color:var(--text-light); max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?php echo htmlspecialchars($expense['notes'] ?? ''); ?>">
+                                <?php echo htmlspecialchars($expense['notes'] ?? ''); ?>
+                            </td>
+                            <td>
+                                <button type="button" onclick='openEditModal(<?php echo json_encode($expense); ?>)' style="background:none;border:none;color:var(--primary-light);cursor:pointer;margin-right:8px;"><i data-lucide="edit-2" width="16" height="16"></i></button>
+                                <button type="button" onclick="deleteExpense(<?php echo $expense['id']; ?>)" style="background:none;border:none;color:#e53935;cursor:pointer;"><i data-lucide="trash-2" width="16" height="16"></i></button>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
 
                     <?php if (empty($expenses)): ?>
                         <tr>
-                            <td colspan="3" style="text-align:center;padding:40px;color:var(--text-light)">
+                            <td colspan="5" style="text-align:center;padding:40px;color:var(--text-light)">
                                 <i data-lucide="inbox" width="40" height="40" style="opacity:0.4;display:block;margin:0 auto 10px"></i>
                                 No expenses logged yet.
                             </td>
@@ -563,7 +630,7 @@ try {
                             const tbody = document.querySelector('#expense-table tbody');
 
                             // Remove empty state if present
-                            const empty = tbody.querySelector('td[colspan="3"]');
+                            const empty = tbody.querySelector('td[colspan="5"]');
                             if (empty) empty.closest('tr').remove();
 
                             const cat = data.expense.category.toLowerCase();
@@ -574,11 +641,20 @@ try {
                             else if (cat.includes('edu')) iconName = 'book-open';
                             else if (cat.includes('uti')) iconName = 'zap';
 
+                            const rAmt = parseFloat(data.expense.amount.replace('₹','').replace(',',''));
+                            const escNotes = data.expense.notes.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                            const exJson = `{"id":${data.expense.id}, "expense_date":"${data.expense.date}", "category":"${data.expense.category}", "amount":"${rAmt}", "notes":"${escNotes}"}`;
+
                             const row = tbody.insertRow(0);
                             row.innerHTML = `
-                                <td>${data.expense.date}</td>
+                                <td class="date-cell" data-date="${data.expense.date}">${formatDate(data.expense.date)}</td>
                                 <td><div class="category-cell"><i data-lucide="${iconName}" width="16" height="16" style="color:var(--primary-light)"></i> ${data.expense.category}</div></td>
-                                <td class="amount">₹${parseFloat(data.expense.amount).toFixed(2)}</td>`;
+                                <td class="amount">${data.expense.amount}</td>
+                                <td style="font-size:0.85rem; color:var(--text-light); max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${data.expense.notes}</td>
+                                <td>
+                                    <button type="button" onclick='openEditModal(${exJson})' style="background:none;border:none;color:var(--primary-light);cursor:pointer;margin-right:8px;"><i data-lucide="edit-2" width="16" height="16"></i></button>
+                                    <button type="button" onclick="deleteExpense(${data.expense.id})" style="background:none;border:none;color:#e53935;cursor:pointer;"><i data-lucide="trash-2" width="16" height="16"></i></button>
+                                </td>`;
                             lucide.createIcons();
 
                             form.reset();
@@ -596,7 +672,54 @@ try {
                     })
                     .catch(() => Toast.error('Network error. Please try again.'));
             });
+
+            // ── Edit Form ──
+            document.getElementById('edit-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                fetch('edit_expense.php', { method: 'POST', body: new FormData(this) })
+                .then(r=>r.json()).then(d=>{
+                    if(d.status==='success') { Toast.success('Updated successfully!'); setTimeout(()=>location.reload(), 1000); }
+                    else Toast.error(d.message);
+                });
+            });
         });
+
+        // Modal triggers
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const format = localStorage.getItem('et_dateformat') || 'YYYY-MM-DD';
+            if (format === 'YYYY-MM-DD') return dateStr;
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return format === 'DD/MM/YYYY' ? `${parts[2]}/${parts[1]}/${parts[0]}` : `${parts[1]}/${parts[2]}/${parts[0]}`;
+        }
+
+        document.querySelectorAll('.date-cell').forEach(cell => {
+            cell.textContent = formatDate(cell.getAttribute('data-date'));
+        });
+
+        function openEditModal(expense) {
+            document.getElementById('edit_id').value = expense.id;
+            document.getElementById('edit_date').value = expense.expense_date;
+            document.getElementById('edit_category').value = expense.category;
+            document.getElementById('edit_amount').value = expense.amount;
+            document.getElementById('edit_notes').value = expense.notes || '';
+            document.getElementById('editModalOverlay').classList.add('show');
+        }
+        function closeEditModal() {
+            document.getElementById('editModalOverlay').classList.remove('show');
+        }
+        function deleteExpense(id) {
+            if(!confirm('Are you sure you want to delete this expense?')) return;
+            fetch('delete_expense.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'id=' + id
+            }).then(r=>r.json()).then(d=>{
+                if(d.status==='success') { Toast.success('Deleted successfully!'); setTimeout(()=>location.reload(), 1000); }
+                else Toast.error(d.message);
+            });
+        }
     </script>
 </body>
 </html>

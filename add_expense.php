@@ -23,6 +23,7 @@ $user_id  = $_SESSION['user_id'];
 $date     = trim($_POST['date']     ?? '');
 $category = trim($_POST['category'] ?? '');
 $amount   = trim($_POST['amount']   ?? '');
+$notes    = trim($_POST['notes']    ?? '');
 
 if (empty($date) || empty($category) || $amount === '') {
     echo json_encode(['status' => 'error', 'message' => 'All fields are required.']);
@@ -56,23 +57,26 @@ if (!in_array($category, $allowed_categories, true)) {
 // ── 4. Insert into DB ─────────────────────────────────────────────────────────
 try {
     $stmt = $pdo->prepare(
-        "INSERT INTO expenses (user_id, expense_date, category, amount)
-         VALUES (:user_id, :expense_date, :category, :amount)"
+        "INSERT INTO expenses (user_id, expense_date, category, amount, notes)
+         VALUES (:user_id, :expense_date, :category, :amount, :notes)"
     );
     $stmt->execute([
         'user_id'      => $user_id,
         'expense_date' => $date,
         'category'     => $category,
         'amount'       => $amount,
+        'notes'        => $notes,
     ]);
 
     // ── 5. Return the new row so JS can prepend it to the table ───────────────
     echo json_encode([
         'status'  => 'success',
         'expense' => [
+            'id'       => $pdo->lastInsertId(),
             'date'     => $date,
             'category' => $category,
             'amount'   => '₹' . number_format($amount, 2),
+            'notes'    => htmlspecialchars($notes),
         ]
     ]);
 

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `gender` varchar(20) DEFAULT NULL,
   `address` text DEFAULT NULL,
   `password` varchar(255) NOT NULL,
+  `monthly_budget` decimal(10,2) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `expenses` (
   `expense_date` date NOT NULL,
   `category` varchar(50) NOT NULL,
   `amount` decimal(10,2) NOT NULL,
+  `notes` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),

@@ -4,6 +4,10 @@ require 'db_connect.php';
 if (!isset($_SESSION['user_id'])) { header("Location: login.html"); exit(); }
 $user_id = $_SESSION['user_id'];
 $email   = $_SESSION['email'] ?? 'User';
+
+$stmt = $pdo->prepare("SELECT monthly_budget FROM users WHERE id = :id");
+$stmt->execute(['id' => $user_id]);
+$currentBudget = $stmt->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -382,6 +386,16 @@ $email   = $_SESSION['email'] ?? 'User';
                             </label>
                         </div>
                     </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <strong>Monthly Budget Limit</strong>
+                            <span>Set a budget to track progress on the dashboard</span>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="number" id="budgetInput" placeholder="e.g. 10000" class="setting-select" style="width:120px;" value="<?php echo htmlspecialchars($currentBudget ?? ''); ?>">
+                            <button onclick="saveBudget()" style="padding:8px 12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-family:'Poppins',sans-serif; font-size:0.85rem;">Save</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -567,6 +581,21 @@ $email   = $_SESSION['email'] ?? 'User';
         }
         function saveBoolSetting(key, val) {
             localStorage.setItem(key, val ? '1' : '0');
+        }
+
+        function saveBudget() {
+            const val = document.getElementById('budgetInput').value;
+            fetch('save_budget.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'monthly_budget=' + encodeURIComponent(val)
+            }).then(r => r.json()).then(data => {
+                if (data.status === 'success') {
+                    Toast.success('Budget saved successfully!');
+                } else {
+                    Toast.error(data.message || 'Error saving budget.');
+                }
+            }).catch(e => Toast.error('Network error.'));
         }
 
         // ── Load Saved Settings ──

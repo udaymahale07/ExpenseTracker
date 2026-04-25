@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 
 try {
     $stmt = $pdo->prepare(
-        "SELECT expense_date, category, amount 
+        "SELECT id, expense_date, category, amount, notes 
          FROM expenses 
          WHERE user_id = :user_id 
            AND expense_date >= DATE_SUB(CURDATE(), INTERVAL 60 DAY) 
